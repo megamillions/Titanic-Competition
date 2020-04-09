@@ -7,7 +7,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 
 # Load data.
-train_data = pd.read_csv('train.csv', index_col='PassengerId')
+train_data = pd.read_csv('train.csv')
 
 # Filter rows with missing values.
 train_data.dropna(inplace=True)
@@ -61,30 +61,61 @@ Baseline model below this point. Score: 0.77511
 
 '''
 
-base_features = ["Pclass", "Sex", "SibSp", "Parch"]
-X0 = pd.get_dummies(train_data[base_features])
+def BaseModel():
+    base_features = ["Pclass", "Sex", "SibSp", "Parch"]
+    X0 = pd.get_dummies(train_data[base_features])
+    
+    # Split into training and testing sets.
+    X0_train, X0_test, y0_train, y0_test = train_test_split(X0, y,
+                                                            train_size=0.5,
+                                                            random_state=1)
+    
+    # Create and fit model.
+    model0 = RandomForestClassifier(n_estimators=100, max_depth=5,
+                                    random_state=1)
+    model0.fit(X0_train, y0_train)
+    
+    y0_pred = model0.predict(X0_test)
+    
+    # Calculate accuracy score.
+    accuracy0 = accuracy_score(y0_test, y0_pred)
+    
+    print(y0_pred[:9])
+    print('Base model accuracy score is...')
+    print(accuracy0)
+    
+    plt.ylabel('y0_pred')
+    sns.swarmplot(x=y0_test, y=y0_pred)
+    plt.show()
+    
+    print(train_data.columns)
+    
+BaseModel()
 
-# Split into training and testing sets.
-X0_train, X0_test, y0_train, y0_test = train_test_split(X0, y,
-                                                        train_size=0.5,
-                                                        random_state=1)
+'''
 
-# Create and fit model.
-model0 = RandomForestClassifier(n_estimators=100, max_depth=5,
-                                random_state=1)
-model0.fit(X0_train, y0_train)
+Print for submission below this line.
 
-y0_pred = model0.predict(X0_test)
+'''
 
-# Calculate accuracy score.
-accuracy0 = accuracy_score(y0_test, y0_pred)
+test_data = pd.read_csv('test.csv')
 
-print(y0_pred[:9])
-print('Base model accuracy score is...')
-print(accuracy0)
+# Filter rows with missing values.
+test_data.dropna(inplace=True)
 
-plt.ylabel('y0_pred')
-sns.swarmplot(x=y0_test, y=y0_pred)
-plt.show()
+# Create test dummy column.
+test_dummy = pd.get_dummies(test_data.Sex)
 
-print(train_data.columns)
+# Create new FamSize column.
+test_data['FamSize'] = test_data['SibSp'] + test_data['Parch']
+
+# Choose fit x-target.
+X_test = pd.concat([test_data[titanic_features], test_dummy], axis=1)
+
+# Use first model, pre-split, to fit test.
+yP_pred = model1.predict(X_test)
+
+output = pd.DataFrame({'PassengerId': test_data.PassengerId,
+                       'Survived': yP_pred})
+output.to_csv('my_submission.csv', index=False)
+print("Your submission was successfully saved!")
