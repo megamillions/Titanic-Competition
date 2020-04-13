@@ -6,23 +6,71 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 
+'''
+
+Score: unknown
+
+'''
+
+# True - testing against train set to measure accuracy.
+# False - testing against test set to save for submission.
+is_accuracy = True
+
 # Load data.
 train_data = pd.read_csv('train.csv')
 
-# Filter rows with missing values.
-train_data.dropna(inplace=True)
-
-# Choose fit y-target.
+# Survived - the predicted y-value.
 y = train_data.Survived
 
-'''
-
-First model is here. Score: unknown
-
-'''
-
-# Choose features.
+# Pclass - 1st class, 2nd class, 3rd class.
+# Sex - Female 0 Male 1. Concatenated later.
+# Age - null values averaged from title in Name.
+# FamSize - number of family aboard the ship.
+# Fare - fare value paid by passenger.
 titanic_features = ['Pclass', 'Age', 'Fare', 'FamSize']
+
+# Fill missing values in age with Title group median.
+def fill_age(data_frame):
+    
+    # Extract titles from Name, e.g. Braund, Mr. Owen Harris.
+    data_frame['Title'] = data_frame.Name.apply(
+        lambda name : name.split(',')[1].split('.')[0].strip())
+    
+    # Normalize titles into groups.
+    title_groups = {
+        'Master' : 'Master',            # Master - young male.
+        'Miss' : 'Miss',                # Miss - young female.
+        'Mlle' : 'Miss',
+        'Ms' : 'Miss',
+        'Mr' : 'Mister',                # Mister - adult male.
+        'Mme' : 'Mistress',             # Mistress - adult female.
+        'Mrs' : 'Mistress',
+        'Capt' : 'Mister',             # Officer - title attained through
+        'Col' : 'Mister',              # adult institution. Gender aspecific.
+        'Dr' : 'Mister',
+        'Major' : 'Mister',
+        'Rev' : 'Mister',
+        'the Countess' : 'Royalty',     # Royalty - title fixed throughout life.
+        'Don' : 'Royalty',
+        'Dona' : 'Royalty',
+        'Jonkheer' : 'Royalty',
+        'Lady' : 'Royalty',
+        'Sir' : 'Royalty'
+        }
+    
+    # Map normalized titles to present titles.
+    data_frame.Title = data_frame.Title.map(title_groups)
+    print(data_frame.Title.value_counts())
+    # Group and apply median Age by each group.
+    grouped = data_frame.groupby(['Title'])
+    
+    sns.swarmplot(x=data_frame.Title, y=data_frame.Survived)
+    plt.show()
+    
+    return grouped.Age.apply(lambda x : x.fillna(x.median()))
+
+# Fill missing Age values in train_data.
+train_data.Age = fill_age(train_data)
 
 # Create Sex dummy column.
 sex_dummy = pd.get_dummies(train_data.Sex)
@@ -31,91 +79,54 @@ sex_dummy = pd.get_dummies(train_data.Sex)
 train_data['FamSize'] = train_data['SibSp'] + train_data['Parch']
 
 # Choose fit x-target.
-X1 = pd.concat([train_data[titanic_features], sex_dummy], axis=1)
+X = pd.concat([train_data[titanic_features], sex_dummy], axis=1)
 
-# Split into training and testing sets.
-X1_train, X1_test, y1_train, y1_test = train_test_split(X1, y,
-                                                        train_size=0.5,
-                                                        random_state=1)
-
-# Create and fit model.
-model1 = RandomForestClassifier(random_state=1)
-model1.fit(X1_train, y1_train)
-
-y1_pred = model1.predict(X1_test)
-
-# Calculate accuracy score.
-accuracy1 = accuracy_score(y1_test, y1_pred)
-
-print(y1_pred[:9])
-print('First model accuracy score is...')
-print(accuracy1)
-
-plt.ylabel('y1_pred')
-sns.swarmplot(x=y1_test, y=y1_pred)
-plt.show()
-
-'''
-
-Baseline model below this point. Score: 0.77511
-
-'''
-
-def BaseModel():
-    base_features = ["Pclass", "Sex", "SibSp", "Parch"]
-    X0 = pd.get_dummies(train_data[base_features])
+if (is_accuracy):
     
     # Split into training and testing sets.
-    X0_train, X0_test, y0_train, y0_test = train_test_split(X0, y,
+    X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                             train_size=0.5,
                                                             random_state=1)
     
     # Create and fit model.
-    model0 = RandomForestClassifier(n_estimators=100, max_depth=5,
-                                    random_state=1)
-    model0.fit(X0_train, y0_train)
+    model = RandomForestClassifier(random_state=1)
+    model.fit(X_train, y_train)
     
-    y0_pred = model0.predict(X0_test)
+    # Create predicted y values.
+    y_pred = model.predict(X_test)
     
     # Calculate accuracy score.
-    accuracy0 = accuracy_score(y0_test, y0_pred)
+    accuracy = accuracy_score(y_test, y_pred)
     
-    print(y0_pred[:9])
-    print('Base model accuracy score is...')
-    print(accuracy0)
+    print('Your model has a predicted accuracy score of %s' % str(accuracy))
     
-    plt.ylabel('y0_pred')
-    sns.swarmplot(x=y0_test, y=y0_pred)
-    plt.show()
+else:
     
-    print(train_data.columns)
+    test_data = pd.read_csv('test.csv')
     
-BaseModel()
+    # Fill missing Age values in test_data.
+    test_data.Age = fill_age(test_data)
 
-'''
+    # Fill the single null value in Fare.
+    test_data.Fare = test_data.Fare.fillna(0)
+    
+    # Create test dummy column.
+    test_dummy = pd.get_dummies(test_data.Sex)
+    
+    # Create new FamSize column.
+    test_data['FamSize'] = test_data['SibSp'] + test_data['Parch']
+    
+    # Choose fit x-target.
+    X_test = pd.concat([test_data[titanic_features], test_dummy], axis=1)
 
-Print for submission below this line.
+    # Create and fit model.
+    model = RandomForestClassifier(random_state=1)
+    model.fit(X, y)
+    
+    # Create predicted y values.
+    y_pred = model.predict(X_test)
 
-'''
-
-test_data = pd.read_csv('test.csv')
-
-# Filter rows with missing values.
-test_data.dropna(inplace=True)
-
-# Create test dummy column.
-test_dummy = pd.get_dummies(test_data.Sex)
-
-# Create new FamSize column.
-test_data['FamSize'] = test_data['SibSp'] + test_data['Parch']
-
-# Choose fit x-target.
-X_test = pd.concat([test_data[titanic_features], test_dummy], axis=1)
-
-# Use first model, pre-split, to fit test.
-yP_pred = model1.predict(X_test)
-
-output = pd.DataFrame({'PassengerId': test_data.PassengerId,
-                       'Survived': yP_pred})
-output.to_csv('my_submission.csv', index=False)
-print("Your submission was successfully saved!")
+    output = pd.DataFrame({'PassengerId': test_data.PassengerId,
+                           'Survived': y_pred})
+    output.to_csv('my_submission.csv', index=False)
+    print("Your submission was successfully saved!")
