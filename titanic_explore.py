@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 
 '''
 
-Score: unknown
+Score: 0.73684
 
 '''
 
@@ -45,11 +45,11 @@ def fill_age(data_frame):
         'Mr' : 'Mister',                # Mister - adult male.
         'Mme' : 'Mistress',             # Mistress - adult female.
         'Mrs' : 'Mistress',
-        'Capt' : 'Mister',             # Officer - title attained through
-        'Col' : 'Mister',              # adult institution. Gender aspecific.
-        'Dr' : 'Mister',
-        'Major' : 'Mister',
-        'Rev' : 'Mister',
+        'Capt' : 'Officer',             # Officer - title attained through
+        'Col' : 'Officer',              # adult institution. Gender aspecific.
+        'Dr' : 'Officer',
+        'Major' : 'Officer',
+        'Rev' : 'Officer',
         'the Countess' : 'Royalty',     # Royalty - title fixed throughout life.
         'Don' : 'Royalty',
         'Dona' : 'Royalty',
