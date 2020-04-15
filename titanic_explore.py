@@ -4,7 +4,10 @@ import seaborn as sns
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+
 
 '''
 
@@ -13,7 +16,7 @@ Score: 0.73684
 '''
 
 # True - testing against train set to measure accuracy.
-# False - testing against test set to save for submission.
+# False - testing against test set and save for submission.
 is_accuracy = True
 
 # Load data.
@@ -60,7 +63,7 @@ def fill_age(data_frame):
     
     # Map normalized titles to present titles.
     data_frame.Title = data_frame.Title.map(title_groups)
-    print(data_frame.Title.value_counts())
+    
     # Group and apply median Age by each group.
     grouped = data_frame.groupby(['Title'])
     
@@ -68,6 +71,49 @@ def fill_age(data_frame):
     plt.show()
     
     return grouped.Age.apply(lambda x : x.fillna(x.median()))
+
+def get_dtc_accuracy(train_X, val_X, train_y, val_y):
+    
+    # Create and fit model.
+    dtc_model = DecisionTreeClassifier(random_state=1)
+    dtc_model.fit(train_X, train_y)
+    
+    # Make validation predictions.
+    val_pred = dtc_model.predict(val_X)
+    
+    # Calculate mean absolute error.
+    val_mae = mean_absolute_error(val_pred, val_y)
+    print("Validation MAE when not specifying max_leaf_nodes: %s." %
+          str(val_mae))
+
+# Using best value for max leaf nodes.
+def get_dtc_max_accuracy(train_X, val_X, train_y, val_y):
+    
+    dtc_max_model = DecisionTreeClassifier(max_leaf_nodes=100, random_state=1)
+    dtc_max_model.fit(train_X, train_y)
+    
+    val_pred = dtc_max_model.predict(val_X)
+    
+    val_mae = mean_absolute_error(val_pred, val_y)
+    print("Validation MAE for best value of max_leaf_nodes: %s." %
+          str(val_mae))
+
+def get_rfc_accuracy(train_X, val_X, train_y, val_y):
+    
+    # Create and fit model.
+    model = RandomForestClassifier(random_state=1)
+    model.fit(X_train, y_train)
+    
+    # Create predicted y values.
+    val_pred = model.predict(val_X)
+
+    val_mae = mean_absolute_error(val_pred, val_y)
+    print("Validation MAE for Random Forest Model: %s." %
+          str(val_mae))
+
+    accuracy = accuracy_score(val_y, val_pred)
+    print("In terms of accuracy that number is %s." % str(accuracy))
+
 
 # Fill missing Age values in train_data.
 train_data.Age = fill_age(train_data)
@@ -81,24 +127,17 @@ train_data['FamSize'] = train_data['SibSp'] + train_data['Parch']
 # Choose fit x-target.
 X = pd.concat([train_data[titanic_features], sex_dummy], axis=1)
 
-if (is_accuracy):
+if is_accuracy:
     
     # Split into training and testing sets.
-    X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                            train_size=0.5,
-                                                            random_state=1)
+    X_train, X_val, y_train, y_val = train_test_split(X, y,
+                                                        train_size=0.5,
+                                                        random_state=1)
     
-    # Create and fit model.
-    model = RandomForestClassifier(random_state=1)
-    model.fit(X_train, y_train)
-    
-    # Create predicted y values.
-    y_pred = model.predict(X_test)
-    
-    # Calculate accuracy score.
-    accuracy = accuracy_score(y_test, y_pred)
-    
-    print('Your model has a predicted accuracy score of %s' % str(accuracy))
+    # Calculate accuracy score for each model.
+    get_dtc_accuracy(X_train, X_val, y_train, y_val)
+    get_dtc_max_accuracy(X_train, X_val, y_train, y_val)    
+    get_rfc_accuracy(X_train, X_val, y_train, y_val)
     
 else:
     
