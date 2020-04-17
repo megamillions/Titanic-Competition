@@ -1,12 +1,10 @@
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import export_graphviz
 
 
 '''
@@ -67,9 +65,6 @@ def fill_age(data_frame):
     # Group and apply median Age by each group.
     grouped = data_frame.groupby(['Title'])
     
-    sns.swarmplot(x=data_frame.Title, y=data_frame.Survived)
-    plt.show()
-    
     return grouped.Age.apply(lambda x : x.fillna(x.median()))
 
 def get_dtc_accuracy(train_X, val_X, train_y, val_y):
@@ -101,19 +96,24 @@ def get_dtc_max_accuracy(train_X, val_X, train_y, val_y):
 def get_rfc_accuracy(train_X, val_X, train_y, val_y):
     
     # Create and fit model.
-    model = RandomForestClassifier(random_state=1)
-    model.fit(X_train, y_train)
+    rfc_model = RandomForestClassifier(random_state=1)
+    rfc_model.fit(X_train, y_train)
     
     # Create predicted y values.
-    val_pred = model.predict(val_X)
+    val_pred = rfc_model.predict(val_X)
 
     val_mae = mean_absolute_error(val_pred, val_y)
     print("Validation MAE for Random Forest Model: %s." %
           str(val_mae))
-
-    accuracy = accuracy_score(val_y, val_pred)
-    print("In terms of accuracy that number is %s." % str(accuracy))
-
+    
+    # Export as dot file.
+    export_graphviz(rfc_model.estimators_[5], out_file='tree.dot',
+                    rounded=True, proportion=False,
+                    precision=2, filled=True)
+    
+    # Convert to png.
+    from subprocess import check_call
+    check_call(['dot', '-Tpng', 'tree.dot', '-o', 'tree.png'], shell=True)
 
 # Fill missing Age values in train_data.
 train_data.Age = fill_age(train_data)
